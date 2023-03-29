@@ -1,0 +1,59 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+actor server
+actor client
+
+participant RpcClientProxy as proxyFactory
+participant proxy
+participant proxy0
+participant RpcRequest
+participant RpcClient
+participant RpcServer
+participant HelloService
+participant ServerSocket
+participant Socket
+participant WorkerThread
+participant ExecutorService
+
+==服务端接受传输过来的数据然并返回结果==
+server->RpcServer:创建RpcServer准备注册服务
+RpcServer-->server:返回实例
+server->HelloService:创建HelloServiceImpl成为服务准备注册到RpcServer中
+HelloService-->server:返回实例
+server->HelloService:使用HelloService
+HelloService->RpcServer:将HelloService注册到RpcServer
+RpcServer->ServerSocket:创建ServerSocket监听这个服务
+
+==生成代理对象==
+client->proxyFactory:创建生成代理对象的工厂
+proxyFactory-->client:返回实例
+client->proxyFactory:获取代理对象getProxy()
+proxyFactory->proxy:使用Proxy静态类
+proxy->proxy0:newProxyInstance()
+proxy0-->proxy:返回代理对象
+proxy->proxyFactory:返回代理对象
+proxyFactory-->client:newProxyInstance()返回代理对象
+
+==调用代理对象的方法==
+client->proxy0:调用代理hello()方法
+proxy0-->proxy:调用父对象super
+proxy-->proxyFactory:调用hanler.invoke
+proxyFactory -> RpcRequest: 调用Builder封装成RpcRequest
+RpcRequest --> proxyFactory: 返回实例
+proxyFactory -> RpcClient: 创建RpcClient代替向远端发送请求
+RpcClient --> proxyFactory: 返回实例
+proxyFactory->RpcClient:调用sendRequest发送RpcRequest
+RpcClient->RpcServer: 通过网络传输传输rpcrequest到服务端
+RpcServer->ServerSocket:使用serversocket
+ServerSocket->Socket:创建Socket
+Socket-->RpcServer:客户端发送请求后服务端接收到Socket
+RpcServer->WorkerThread:使用socket和service为参数创建WorkerThread实例
+WorkerThread->ExecutorService:扔到线程池中执行
+ExecutorService->WorkerThread:调用run方法
+WorkerThread->Socket:通过socket传输返回值
+Socket-->RpcClient:返回结果
+RpcClient-->RpcClientProxy:返回结果
+proxyFactory-->client:返回结果
+@enduml

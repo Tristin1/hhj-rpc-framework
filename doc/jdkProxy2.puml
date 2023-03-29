@@ -1,0 +1,35 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+autonumber
+
+actor 视频作者 as photoAuthor
+participant 弹幕server as server
+database 弹幕redis as redis
+database 弹幕memcached as memcached
+participant 敏感词平台 as mingan
+
+photoAuthor->server: 请求作者侧弹幕列表
+server->redis: 查询弹幕id列表
+redis-->server: 返回
+server->memcached: 根据弹幕id查询弹幕实体
+memcached-->server: 返回弹幕内容
+server->mingan: 过滤弹幕内容
+
+server-->photoAuthor: 返回弹幕列表
+
+== 回源逻辑 ==
+autonumber
+participant 互动中台 as interact
+database 弹幕mysql as mysql
+participant 弹幕cachesettter as cacheSetter
+
+cacheSetter->mysql: 查询pid的弹幕列表
+mysql-->cacheSetter: 返回
+cacheSetter->interact: 请求弹幕列表的点赞数
+interact->cacheSetter: 返回
+cacheSetter->redis: 根据弹幕列表和弹幕点赞数构建redis缓存
+
+
+
+@enduml
